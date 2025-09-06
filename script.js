@@ -51,4 +51,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const image=document.getElementById('product-image').value.trim();
     const type=document.getElementById('product-type').value;
     if(!name||!price||!image||!type)return showToast('Заповніть всі поля','error');
-    const products=getProducts(); products.push({name,price,image,type,seller:currentUser}); saveProducts(products); loadProducts
+    const products=getProducts(); products.push({name,price,image,type,seller:currentUser}); saveProducts(products); loadProducts(); showToast('Товар додано!');
+  });
+
+  function loadProducts(){
+    const container=document.getElementById('products'); container.innerHTML='';
+    let products=getProducts();
+    if(products.length===0){const demo=[{name:"Demo Logo",price:100,image:"assets/logos/logo1.png",type:"logo",seller:"Admin"}]; demo.forEach(p=>products.push(p)); saveProducts(products);}
+    products.forEach((p,idx)=>{
+      const card=document.createElement('div'); card.className='product-card'; card.innerHTML=`
+        <img src="${p.image}" alt="${p.name}" style="width:100%;border-radius:10px;margin-bottom:10px;">
+        <span class="product-name">${p.name}</span>
+        <span class="product-type">${p.type}</span>
+        <span class="product-price">$${p.price}</span>
+        <button class="buy-btn" data-index="${idx}">Купити</button>
+      `;
+      container.appendChild(card);
+    });
+    document.querySelectorAll('.buy-btn').forEach(btn=>{
+      btn.addEventListener('click',e=>{
+        const idx=e.target.dataset.index; const products=getProducts(); const p=products[idx];
+        if(!currentUser)return showToast('Увійдіть для покупки','error');
+        if(balance<p.price)return showToast('Недостатньо коштів','error');
+        balance-=parseFloat(p.price); localStorage.setItem('balance',balance); addPurchase(p); updateUI(); showToast(`Купили ${p.name} за $${p.price}`);
+      });
+    });
+  }
+
+  function addPurchase(p){const purchases=getPurchases(); purchases.push({name:p.name,price:p.price,type:p.type,buyer:currentUser,date:new Date().toISOString()}); savePurchases(purchases); renderAccount();}
+  function renderAccount(){const section=document.getElementById('account-section'); if(!currentUser){section.style.display='none'; return;} section.style.display='block'; document.getElementById('acc-email').innerText=currentUser; document.getElementById('acc-balance').innerText=balance.toFixed(2); const h=document.getElementById('acc-purchases-list'); const purchases=getPurchases().filter(p=>p.buyer===currentUser); h.innerHTML=''; purchases.forEach(p=>{const d=document.createElement('div'); d.innerText=`${p.name} - $${p.price} (${p.type}) - ${new Date(p.date).toLocaleString()}`; h.appendChild(d);});}
+  updateUI();
+});
